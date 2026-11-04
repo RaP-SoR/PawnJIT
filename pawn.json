@@ -1,0 +1,22 @@
+{
+    "user": "RaP-SoR",
+    "repo": "PawnJIT",
+    "contributors": ["1therealcloud"],
+    "resources": [
+        {
+            "name": "^PawnJIT-(.+)-linux.tar.gz$",
+            "platform": "linux",
+            "archive": true,
+            "plugins": ["components/PawnJIT.so"]
+        },
+        {
+            "name": "^PawnJIT-(.*)-win32.zip$",
+            "platform": "windows",
+            "archive": true,
+            "plugins": ["components/PawnJIT.dll"],
+            "files": {
+                "components/PawnJIT.pdb": "components/PawnJIT.pdb"
+            }
+        }
+    ]
+}
