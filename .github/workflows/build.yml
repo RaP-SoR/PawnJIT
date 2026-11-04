@@ -8,11 +8,6 @@ on:
       - "v*"
   pull_request:
   workflow_dispatch:
-    inputs:
-      create_release:
-        description: Publish a GitHub Release
-        type: boolean
-        default: false
 
 permissions:
   contents: read
@@ -57,12 +52,7 @@ jobs:
         run: file build/PawnJIT.so | grep -q "ELF 32-bit"
 
       - name: Package
-        run: |
-          version="${{ steps.version.outputs.version }}"
-          mkdir -p package/components
-          cp build/PawnJIT.so package/components/PawnJIT.so
-          tar -czf "PawnJIT-${version}-linux.tar.gz" -C package components
-          tar -tzf "PawnJIT-${version}-linux.tar.gz" | grep -qx "components/PawnJIT.so"
+        run: python3 scripts/package_release.py --platform linux --build-dir build --version "${{ steps.version.outputs.version }}"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -103,17 +93,7 @@ jobs:
 
       - name: Package
         shell: bash
-        run: |
-          version="${{ steps.version.outputs.version }}"
-          test -f build/Release/PawnJIT.dll
-          test -f build/Release/PawnJIT.pdb
-          mkdir -p package/components
-          cp build/Release/PawnJIT.dll package/components/PawnJIT.dll
-          cp build/Release/PawnJIT.pdb package/components/PawnJIT.pdb
-          tar -a -cf "PawnJIT-${version}-win32.zip" -C package components
-          listing=$(tar -tf "PawnJIT-${version}-win32.zip" | tr -d '\r')
-          printf '%s\n' "$listing" | grep -qx "components/PawnJIT.dll"
-          printf '%s\n' "$listing" | grep -qx "components/PawnJIT.pdb"
+        run: python scripts/package_release.py --platform windows --build-dir build --version "${{ steps.version.outputs.version }}"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -122,7 +102,7 @@ jobs:
           if-no-files-found: error
 
   release:
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.create_release == true) }}
+    if: ${{ github.event_name != 'pull_request' && (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')) }}
     needs: [linux, windows]
     runs-on: ubuntu-24.04
     permissions:
@@ -154,12 +134,8 @@ jobs:
           printf '%s\n' "$listing" | grep -qx "components/PawnJIT.pdb"
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release upload "$tag" "$linux" "$windows" --clobber
-          elif [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
-            if gh api "/repos/${GITHUB_REPOSITORY}/git/ref/tags/${tag}" >/dev/null 2>&1; then
-              echo "Tag ${tag} already exists. Push that tag to publish, or delete it before creating a release from this run." >&2
-              exit 1
-            fi
-            gh release create "$tag" "$linux" "$windows" --title "$tag" --target "$GITHUB_SHA" --generate-notes
-          else
+          elif gh api "/repos/${GITHUB_REPOSITORY}/git/ref/tags/${tag}" >/dev/null 2>&1; then
             gh release create "$tag" "$linux" "$windows" --title "$tag" --generate-notes
+          else
+            gh release create "$tag" "$linux" "$windows" --title "$tag" --target "$GITHUB_SHA" --generate-notes
           fi

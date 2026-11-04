@@ -66,17 +66,12 @@ Use `Debug` for development or `RelWithDebInfo` for an optimized build with addi
 
 ## Release
 
-The release version is `project(PawnJIT VERSION ...)` in `CMakeLists.txt`. GitHub Actions publishes the packages in either of these ways:
-
-- Push a tag `v<version>` that matches that version.
-- Run the **Build** workflow manually and enable **Publish a GitHub Release**. That creates the tag `v<version>` on the selected commit and uploads the archives.
-
-Both attach:
+A successful build on `master` publishes GitHub Release `v<version>`. `<version>` is `project(PawnJIT VERSION ...)` in `CMakeLists.txt`. The archive names and paths come from `pawn.json`, so the files on the release page are the ones a user downloads:
 
 - `PawnJIT-<version>-linux.tar.gz` with `components/PawnJIT.so`, built on Ubuntu 24.04 (also runs on Debian 13)
 - `PawnJIT-<version>-win32.zip` with `components/PawnJIT.dll` and `components/PawnJIT.pdb`, built on Windows Server 2022
 
-Branch pushes and pull requests only upload the same archives as workflow artifacts. A release run that is repeated replaces the assets.
+A later build of the same version replaces those assets. Pull requests upload the same archives as workflow artifacts and do not publish a release. A tag `v<version>` publishes as well, and fails when it does not match the CMake version.
 
 ## License
 
