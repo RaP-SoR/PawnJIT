@@ -1,0 +1,141 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - "**"
+    tags:
+      - "v*"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install 32-bit toolchain
+        run: sudo apt-get update && sudo apt-get install -y g++-multilib cmake file
+
+      - name: Read version
+        id: version
+        run: |
+          version=$(sed -n 's/^project(PawnJIT VERSION \([0-9][0-9.]*\).*/\1/p' CMakeLists.txt)
+          if [ -z "$version" ]; then
+            echo "Could not read project version from CMakeLists.txt" >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            tag="${GITHUB_REF#refs/tags/v}"
+            if [ "$tag" != "$version" ]; then
+              echo "Tag v${tag} does not match CMake version ${version}" >&2
+              exit 1
+            fi
+          fi
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Check 32-bit ELF
+        run: file build/PawnJIT.so | grep -q "ELF 32-bit"
+
+      - name: Package
+        run: python3 scripts/package_release.py --platform linux --build-dir build --version "${{ steps.version.outputs.version }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PawnJIT-${{ steps.version.outputs.version }}-linux.tar.gz
+          path: PawnJIT-${{ steps.version.outputs.version }}-linux.tar.gz
+          if-no-files-found: error
+
+  windows:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Read version
+        id: version
+        shell: bash
+        run: |
+          version=$(sed -n 's/^project(PawnJIT VERSION \([0-9][0-9.]*\).*/\1/p' CMakeLists.txt)
+          if [ -z "$version" ]; then
+            echo "Could not read project version from CMakeLists.txt" >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            tag="${GITHUB_REF#refs/tags/v}"
+            if [ "$tag" != "$version" ]; then
+              echo "Tag v${tag} does not match CMake version ${version}" >&2
+              exit 1
+            fi
+          fi
+
+      - name: Configure
+        run: cmake -S . -B build -A Win32
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Package
+        shell: bash
+        run: python scripts/package_release.py --platform windows --build-dir build --version "${{ steps.version.outputs.version }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PawnJIT-${{ steps.version.outputs.version }}-win32.zip
+          path: PawnJIT-${{ steps.version.outputs.version }}-win32.zip
+          if-no-files-found: error
+
+  release:
+    if: ${{ github.event_name != 'pull_request' && (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')) }}
+    needs: [linux, windows]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: PawnJIT-${{ needs.linux.outputs.version }}-linux.tar.gz
+          path: dist
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: PawnJIT-${{ needs.linux.outputs.version }}-win32.zip
+          path: dist
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.linux.outputs.version }}
+        run: |
+          tag="v${VERSION}"
+          linux="dist/PawnJIT-${VERSION}-linux.tar.gz"
+          windows="dist/PawnJIT-${VERSION}-win32.zip"
+          test -f "$linux"
+          test -f "$windows"
+          tar -tzf "$linux" | grep -qx "components/PawnJIT.so"
+          listing=$(tar -tf "$windows")
+          printf '%s\n' "$listing" | grep -qx "components/PawnJIT.dll"
+          printf '%s\n' "$listing" | grep -qx "components/PawnJIT.pdb"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" "$linux" "$windows" --clobber
+          elif gh api "/repos/${GITHUB_REPOSITORY}/git/ref/tags/${tag}" >/dev/null 2>&1; then
+            gh release create "$tag" "$linux" "$windows" --title "$tag" --generate-notes
+          else
+            gh release create "$tag" "$linux" "$windows" --title "$tag" --target "$GITHUB_SHA" --generate-notes
+          fi

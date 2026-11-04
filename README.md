@@ -20,10 +20,35 @@ Benchmark results comparing the standard Pawn VM against PawnJIT on the same mac
 | Parity Stress | 337.89 µs | 73.73 µs | **4.58x** |
 | Differential Fuzz | 91.31 µs | 17.27 µs | **5.29x** |
 
+## sampctl
+
+Install PawnJIT directly with sampctl (currently pinned to the packaging branch for testing):
+
+```bash
+sampctl install RaP-SoR/PawnJIT@sampctl-pawn-json
+```
+
+Or declare it manually in your package `pawn.json` and then run `sampctl ensure`:
+
+```json
+{
+    "dependencies": [
+        "RaP-SoR/PawnJIT@sampctl-pawn-json"
+    ]
+}
+```
+
+sampctl downloads the matching GitHub release asset and installs:
+
+- Linux: `components/PawnJIT.so`
+- Windows: `components/PawnJIT.dll` and `components/PawnJIT.pdb`
+
+Keep the PDB next to the DLL when investigating crashes; it provides symbols for debuggers and crash dumps.
+
 ## Build
 
 ```bash
-git clone --recurse-submodules https://github.com/1therealcloud/PawnJIT.git
+git clone --recurse-submodules https://github.com/RaP-SoR/PawnJIT.git
 cd PawnJIT
 
 # Windows
@@ -35,8 +60,18 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release -j$(nproc)
 ```
 
-The DLL ends up in `build/Release/PawnJIT.dll|.so`.
-Use `Debug` for development or `RelWithDebInfo` for an optimized build with debug information.
+The binary ends up in `build/Release/PawnJIT.dll` on Windows and `build/PawnJIT.so` on Linux.
+The Windows Release build also writes `PawnJIT.pdb` next to the DLL.
+Use `Debug` for development or `RelWithDebInfo` for an optimized build with additional debug information.
+
+## Release
+
+A successful build on `master` publishes GitHub Release `v<version>`. `<version>` is `project(PawnJIT VERSION ...)` in `CMakeLists.txt`. The archive names and paths come from `pawn.json`, so the files on the release page are the ones a user downloads:
+
+- `PawnJIT-<version>-linux.tar.gz` with `components/PawnJIT.so`, built on Ubuntu 24.04 (also runs on Debian 13)
+- `PawnJIT-<version>-win32.zip` with `components/PawnJIT.dll` and `components/PawnJIT.pdb`, built on Windows Server 2022
+
+A later build of the same version replaces those assets. Pull requests upload the same archives as workflow artifacts and do not publish a release. A tag `v<version>` publishes as well, and fails when it does not match the CMake version.
 
 ## License
 
