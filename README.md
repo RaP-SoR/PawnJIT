@@ -25,10 +25,10 @@ Benchmark results comparing the standard Pawn VM against PawnJIT on the same mac
 Install PawnJIT directly with sampctl (currently pinned to the packaging branch for testing):
 
 ```bash
-sampctl package install RaP-SoR/PawnJIT@sampctl-pawn-json
+sampctl install RaP-SoR/PawnJIT@sampctl-pawn-json
 ```
 
-Or declare it manually in your package `pawn.json` and then run `sampctl package ensure`:
+Or declare it manually in your package `pawn.json` and then run `sampctl ensure`:
 
 ```json
 {
