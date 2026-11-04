@@ -73,6 +73,8 @@ A successful build on `master` publishes GitHub Release `v<version>`. `<version>
 
 A later build of the same version replaces those assets. Pull requests upload the same archives as workflow artifacts and do not publish a release. A tag `v<version>` publishes as well, and fails when it does not match the CMake version.
 
+The build can also be started by hand: on GitHub open **Actions**, choose **Build**, then **Run workflow** on `master`. That publishes the same release. The button is available once this workflow file is on the default branch.
+
 ## License
 
 The plugin code is licensed under [MPL 2.0](LICENSE).
