@@ -60,8 +60,23 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release -j$(nproc)
 ```
 
-The DLL ends up in `build/Release/PawnJIT.dll|.so`.
-Use `Debug` for development or `RelWithDebInfo` for an optimized build with debug information.
+The binary ends up in `build/Release/PawnJIT.dll` on Windows and `build/PawnJIT.so` on Linux.
+The Windows Release build also writes `PawnJIT.pdb` next to the DLL.
+Use `Debug` for development or `RelWithDebInfo` for an optimized build with additional debug information.
+
+## Release
+
+The release version is `project(PawnJIT VERSION ...)` in `CMakeLists.txt`. GitHub Actions publishes the packages in either of these ways:
+
+- Push a tag `v<version>` that matches that version.
+- Run the **Build** workflow manually and enable **Publish a GitHub Release**. That creates the tag `v<version>` on the selected commit and uploads the archives.
+
+Both attach:
+
+- `PawnJIT-<version>-linux.tar.gz` with `components/PawnJIT.so`, built on Ubuntu 24.04 (also runs on Debian 13)
+- `PawnJIT-<version>-win32.zip` with `components/PawnJIT.dll` and `components/PawnJIT.pdb`, built on Windows Server 2022
+
+Branch pushes and pull requests only upload the same archives as workflow artifacts. A release run that is repeated replaces the assets.
 
 ## License
 

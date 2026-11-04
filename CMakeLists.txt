@@ -61,3 +61,11 @@ target_include_directories(PawnJIT SYSTEM PRIVATE
 )
 target_link_libraries(PawnJIT PRIVATE omp-sdk subhook asmjit::asmjit)
 set_target_properties(PawnJIT PROPERTIES PREFIX "")
+
+# Release stays optimized. /DEBUG writes PawnJIT.pdb; /OPT keeps
+# optimizations that the linker would otherwise drop when /DEBUG is set.
+# /FS lets parallel compiles share the /Zi program database.
+if(MSVC)
+    target_compile_options(PawnJIT PRIVATE "$<$<CONFIG:Release>:/Zi;/FS>")
+    target_link_options(PawnJIT PRIVATE "$<$<CONFIG:Release>:/DEBUG;/OPT:REF;/OPT:ICF;/INCREMENTAL:NO>")
+endif()
