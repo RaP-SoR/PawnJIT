@@ -20,10 +20,45 @@ Benchmark results comparing the standard Pawn VM against PawnJIT on the same mac
 | Parity Stress | 337.89 µs | 73.73 µs | **4.58x** |
 | Differential Fuzz | 91.31 µs | 17.27 µs | **5.29x** |
 
+## sampctl
+
+Add PawnJIT as an open.mp component dependency in your package `pawn.json`:
+
+```json
+{
+    "dependencies": [
+        "component://RaP-SoR/PawnJIT"
+    ]
+}
+```
+
+Pin a release tag when you need a fixed version:
+
+```json
+{
+    "dependencies": [
+        "component://RaP-SoR/PawnJIT:v0.54.3"
+    ]
+}
+```
+
+Then run:
+
+```bash
+sampctl package ensure
+```
+
+sampctl downloads the matching GitHub release asset and installs:
+
+- Linux: `components/PawnJIT.so`
+- Windows: `components/PawnJIT.dll` and `components/PawnJIT.pdb`
+
+Keep the PDB next to the DLL when investigating crashes; it provides symbols for debuggers and crash dumps.
+
 ## Build
 
 ```bash
-git clone --recurse-submodules https://github.com/1therealcloud/PawnJIT.git
+git clone --recurse-submodules https://github.com/RaP-SoR/PawnJIT.git
 cd PawnJIT
 
 # Windows
