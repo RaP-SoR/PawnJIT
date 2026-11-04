@@ -22,30 +22,20 @@ Benchmark results comparing the standard Pawn VM against PawnJIT on the same mac
 
 ## sampctl
 
-Add PawnJIT as an open.mp component dependency in your package `pawn.json`:
-
-```json
-{
-    "dependencies": [
-        "component://RaP-SoR/PawnJIT"
-    ]
-}
-```
-
-Pin a release tag when you need a fixed version:
-
-```json
-{
-    "dependencies": [
-        "component://RaP-SoR/PawnJIT:v0.54.3"
-    ]
-}
-```
-
-Then run:
+Install PawnJIT directly with sampctl (currently pinned to the packaging branch for testing):
 
 ```bash
-sampctl package ensure
+sampctl package install component://RaP-SoR/PawnJIT@sampctl-pawn-json
+```
+
+Or declare it manually in your package `pawn.json` and then run `sampctl package ensure`:
+
+```json
+{
+    "dependencies": [
+        "component://RaP-SoR/PawnJIT@sampctl-pawn-json"
+    ]
+}
 ```
 
 sampctl downloads the matching GitHub release asset and installs:
