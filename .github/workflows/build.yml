@@ -128,10 +128,23 @@ jobs:
           windows="dist/PawnJIT-${VERSION}-win32.zip"
           test -f "$linux"
           test -f "$windows"
-          tar -tzf "$linux" | grep -qx "components/PawnJIT.so"
-          listing=$(tar -tf "$windows")
-          printf '%s\n' "$listing" | grep -qx "components/PawnJIT.dll"
-          printf '%s\n' "$listing" | grep -qx "components/PawnJIT.pdb"
+          # GNU tar does not read the Windows zip. Python checks both archives.
+          python3 - "$linux" "$windows" <<'PY'
+          import sys
+          import tarfile
+          import zipfile
+
+          linux, windows = sys.argv[1:]
+          with tarfile.open(linux, "r:gz") as archive:
+              linux_names = [name for name in archive.getnames() if not name.endswith("/")]
+          if "components/PawnJIT.so" not in linux_names:
+              raise SystemExit(f"linux archive missing components/PawnJIT.so: {linux_names}")
+          with zipfile.ZipFile(windows) as archive:
+              windows_names = [name.replace("\\", "/") for name in archive.namelist()]
+          for required in ("components/PawnJIT.dll", "components/PawnJIT.pdb"):
+              if required not in windows_names:
+                  raise SystemExit(f"windows archive missing {required}: {windows_names}")
+          PY
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release upload "$tag" "$linux" "$windows" --clobber
           elif gh api "/repos/${GITHUB_REPOSITORY}/git/ref/tags/${tag}" >/dev/null 2>&1; then
